@@ -1,10 +1,18 @@
 const { execSync } = require("child_process");
+
 const path = require("path");
+
 const fs = require("fs");
 
 const projectName = process.argv[2];
 const currentPath = process.cwd();
 const projectPath = path.join(currentPath, projectName);
+
+if (!projectName) {
+  console.log("Please write projectname");
+  console.log("i.e., npx @asadharoon/create-nodejs-app {projectname}");
+}
+
 const git_repo = "https://github.com/asadharoon/node-boilerplate.git";
 try {
   fs.mkdirSync(projectPath);
