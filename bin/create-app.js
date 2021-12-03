@@ -1,50 +1,108 @@
-"use strict";
 
-const { execSync } = require("child_process");
+#!/usr/bin/env node
+const util = require('util');
+const path = require('path');
+const fs = require('fs');
+const { execSync } = require('child_process');
 
-const path = require("path");
-
-const fs = require("fs");
-
-const projectName = process.argv[2];
-const currentPath = process.cwd();
-const projectPath = path.join(currentPath, projectName);
-
-if (!projectName) {
-  console.log("Please write projectname");
-  console.log("i.e., npx @asadharoon/create-nodejs-app {projectname}");
+// Utility functions
+const exec = util.promisify(require('child_process').exec);
+async function runCmd(command) {
+  try {
+    const { stdout, stderr } = await exec(command);
+    console.log(stdout);
+    console.log(stderr);
+  } catch {
+    (error) => {
+      console.log(error);
+    };
+  }
 }
 
-const git_repo = "https://github.com/asadharoon/node-boilerplate.git";
+async function hasYarn() {
+  try {
+    await execSync('yarnpkg --version', { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Validate arguments
+if (process.argv.length < 3) {
+  console.log('Please specify the target project directory.');
+  console.log('For example:');
+  console.log('    npx @asadharoon/create-nodejs-app my-app');
+
+  process.exit(1);
+}
+
+// Define constants
+const ownPath = process.cwd();
+const folderName = process.argv[2];
+const appPath = path.join(ownPath, folderName);
+const repo = 'https://github.com/asadharoon/node-boilerplate.git';
+
+// Check if directory already exists
 try {
-  fs.mkdirSync(projectPath);
+  fs.mkdirSync(appPath);
 } catch (err) {
-  if (err.code === "EEXIST") {
-    console.log(
-      `The file ${projectName} already exist in the current directory, please give it another name.`
-    );
+  if (err.code === 'EEXIST') {
+    console.log('Directory already exists. Please choose another name for the project.');
   } else {
     console.log(error);
   }
   process.exit(1);
 }
-async function main() {
+
+async function setup() {
   try {
-    console.log("Downloading files...");
-    execSync(`git clone --depth 1 ${git_repo} ${projectPath}`);
+    // Clone repo
+    console.log(`Downloading files from repo ${repo}`);
+    await runCmd(`git clone --depth 1 ${repo} ${folderName}`);
+    console.log('Cloned successfully.');
+    console.log('');
 
-    process.chdir(projectPath);
+    // Change directory
+    process.chdir(appPath);
 
-    console.log("Installing dependencies...");
-    execSync("npm install");
+    // Install dependencies
+    const useYarn = await hasYarn();
+    console.log('Installing dependencies...');
+    if (useYarn) {
+      await runCmd('yarn install');
+    } else {
+      await runCmd('npm install');
+    }
+    console.log('Dependencies installed successfully.');
+    console.log();
 
-    console.log("Removing useless files");
-    execSync("npx rimraf ./.git");
-    fs.rmdirSync(path.join(projectPath, "bin"), { recursive: true });
+    // Copy envornment variables
+    fs.copyFileSync(path.join(appPath, '.env.example'), path.join(appPath, '.env'));
+    console.log('Environment files copied.');
 
-    console.log("The installation is done, this is ready to use !");
+    // Delete .git folder
+    await runCmd('npx rimraf ./.git');
+
+
+    fs.unlinkSync(path.join(appPath, 'bin', 'create-app.js'));
+    fs.rmdirSync(path.join(appPath, 'bin'));
+    if (!useYarn) {
+      fs.unlinkSync(path.join(appPath, 'yarn.lock'));
+    }
+
+    console.log('Installation is now complete!');
+    console.log();
+
+    console.log('We suggest that you start by typing:');
+    console.log(`    cd ${folderName}`);
+    console.log(useYarn ? '    yarn dev' : '    npm run dev');
+    console.log();
+    console.log('Enjoy your production-ready Node.js app, which already supports a large number of ready-made features!');
+    console.log('Check README.md for more info.');
   } catch (error) {
     console.log(error);
   }
 }
-main();
+
+setup();

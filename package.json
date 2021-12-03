@@ -1,11 +1,9 @@
 {
   "name": "@asadharoon/create-nodejs-app",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "main": "server.js",
   "license": "MIT",
-  "bin": {
-    "create-nodejs-app": "./bin/create-app.js"
-  },
+  "bin": "bin/create-app.js",
   "scripts": {
     "dev": "nodemon server.js",
     "start":"node server.js"
